@@ -1,0 +1,4 @@
+###### Requirements without Version Specifiers ######
+pytesseract==0.3.7
+requests==2.25.1
+Pillow==8.1.0
