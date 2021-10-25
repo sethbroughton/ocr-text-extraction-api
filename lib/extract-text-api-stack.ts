@@ -6,6 +6,7 @@ import * as path from 'path';
 import * as apigateway from '@aws-cdk/aws-apigatewayv2';
 import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
+import { Bucket } from '@aws-cdk/aws-s3';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -35,7 +36,17 @@ export class ExtractTextApiStack extends cdk.Stack {
       path: '/processor',
       methods: [ HttpMethod.POST ], 
       integration: processImageIntegration
-    });
+    })
+
+    const uploadBucket = new Bucket(this, 'UploadBucket', {
+      autoDeleteObjects: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY
+    })
+
+    new cdk.CfnOutput(this, "uploadBucketName", {
+      value: uploadBucket.bucketName,
+      exportName: "uploadBucketName"
+    })
 
   }
 }
