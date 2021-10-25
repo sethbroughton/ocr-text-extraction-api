@@ -7,6 +7,7 @@ import * as apigateway from '@aws-cdk/aws-apigatewayv2';
 import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
 import { Bucket } from '@aws-cdk/aws-s3';
+import * as cognito from '@aws-cdk/aws-cognito';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -43,8 +44,20 @@ export class ExtractTextApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY
     })
 
+    const identityPool = new cognito.CfnIdentityPool(this, 'identity-pool', {
+      identityPoolName: 'my-identity-pool',
+      allowUnauthenticatedIdentities: true,
+      cognitoIdentityProviders: [
+        {
+          clientId: userPoolClient.userPoolClientId,
+          providerName: userPool.userPoolProviderName,
+        },
+      ],
+    });
+
+
     new cdk.CfnOutput(this, "uploadBucketName", {
-      value: uploadBucket.bucketName,
+      value: uploadBucket.bucketWebsiteUrl,
       exportName: "uploadBucketName"
     })
 
