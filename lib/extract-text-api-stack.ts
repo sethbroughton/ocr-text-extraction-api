@@ -6,8 +6,8 @@ import * as path from 'path';
 import * as apigateway from '@aws-cdk/aws-apigatewayv2';
 import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
-import { Bucket } from '@aws-cdk/aws-s3';
-import * as cognito from '@aws-cdk/aws-cognito';
+import { Bucket, EventType } from '@aws-cdk/aws-s3';
+import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -35,19 +35,19 @@ export class ExtractTextApiStack extends cdk.Stack {
 
     api.addRoutes({
       path: '/processor',
-      methods: [ HttpMethod.POST ], 
+      methods: [HttpMethod.POST],
       integration: processImageIntegration
     })
 
     const uploadBucket = new Bucket(this, 'UploadBucket', {
-      autoDeleteObjects: true,
-      removalPolicy: cdk.RemovalPolicy.DESTROY
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true
     })
+    // .fromBucketArn(this, 'UploadBucket', 'arn:aws:s3:::webapp1422c2444df1494d81f0a1936bdc0c68192600-dev/public/')
 
-    new cdk.CfnOutput(this, "uploadBucketName", {
-      value: uploadBucket.bucketWebsiteUrl,
-      exportName: "uploadBucketName"
-    })
+    imageProcessor.addEventSource(new S3EventSource(uploadBucket, {
+      events: [EventType.OBJECT_CREATED]
+    }))
 
   }
 }
