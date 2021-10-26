@@ -44,18 +44,6 @@ export class ExtractTextApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY
     })
 
-    const identityPool = new cognito.CfnIdentityPool(this, 'identity-pool', {
-      identityPoolName: 'my-identity-pool',
-      allowUnauthenticatedIdentities: true,
-      cognitoIdentityProviders: [
-        {
-          clientId: userPoolClient.userPoolClientId,
-          providerName: userPool.userPoolProviderName,
-        },
-      ],
-    });
-
-
     new cdk.CfnOutput(this, "uploadBucketName", {
       value: uploadBucket.bucketWebsiteUrl,
       exportName: "uploadBucketName"
