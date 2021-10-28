@@ -8,6 +8,8 @@ import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
 import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
+import * as iam from '@aws-cdk/aws-iam';
+import { Role, ServicePrincipal } from '@aws-cdk/aws-iam';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -43,7 +45,68 @@ export class ExtractTextApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true
     })
+
     // .fromBucketArn(this, 'UploadBucket', 'arn:aws:s3:::webapp1422c2444df1494d81f0a1936bdc0c68192600-dev/public/')
+
+    const unAuthRole = new Role(this, 'unAuthRole', {
+      assumedBy: new ServicePrincipal('s3.amazonaws.com'),
+    });
+
+    const policyDocument = {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Action": [
+            "s3:GetObject",
+            "s3:PutObject",
+            "s3:DeleteObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::{enter bucket name}/public/*"
+          ],
+          "Effect": "Allow"
+        },
+        {
+          "Action": [
+            "s3:PutObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::{enter bucket name}/uploads/*"
+          ],
+          "Effect": "Allow"
+        },
+        {
+          "Action": [
+            "s3:GetObject"
+          ],
+          "Resource": [
+            "arn:aws:s3:::{enter bucket name}/protected/*"
+          ],
+          "Effect": "Allow"
+        },
+        {
+          "Condition": {
+            "StringLike": {
+              "s3:prefix": [
+                "public/",
+                "public/*",
+                "protected/",
+                "protected/*"
+              ]
+            }
+          },
+          "Action": [
+            "s3:ListBucket"
+          ],
+          "Resource": [
+            "arn:aws:s3:::{enter bucket name}"
+          ],
+          "Effect": "Allow"
+        }
+      ]
+    }
+
+
 
     imageProcessor.addEventSource(new S3EventSource(uploadBucket, {
       events: [EventType.OBJECT_CREATED]
