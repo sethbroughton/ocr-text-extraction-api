@@ -10,6 +10,8 @@ import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
 import * as iam from '@aws-cdk/aws-iam';
 import { Role, ServicePrincipal } from '@aws-cdk/aws-iam';
+import * as cognito from '@aws-cdk/aws-cognito';
+import { CfnIdentityPool } from '@aws-cdk/aws-cognito';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -52,7 +54,9 @@ export class ExtractTextApiStack extends cdk.Stack {
       assumedBy: new ServicePrincipal('s3.amazonaws.com'),
     });
 
-    const policyDocument = {
+    // const AuthRole = new Role(this, )
+
+    const unAuthPolicyDocument = {
       "Version": "2012-10-17",
       "Statement": [
         {
@@ -62,7 +66,7 @@ export class ExtractTextApiStack extends cdk.Stack {
             "s3:DeleteObject"
           ],
           "Resource": [
-            "arn:aws:s3:::{enter bucket name}/public/*"
+            `arn:aws:s3:::${uploadBucket.bucketName}/public/*`
           ],
           "Effect": "Allow"
         },
@@ -71,7 +75,7 @@ export class ExtractTextApiStack extends cdk.Stack {
             "s3:PutObject"
           ],
           "Resource": [
-            "arn:aws:s3:::{enter bucket name}/uploads/*"
+            `arn:aws:s3:::${uploadBucket.bucketName}/uploads/*`
           ],
           "Effect": "Allow"
         },
@@ -80,7 +84,7 @@ export class ExtractTextApiStack extends cdk.Stack {
             "s3:GetObject"
           ],
           "Resource": [
-            "arn:aws:s3:::{enter bucket name}/protected/*"
+            `arn:aws:s3:::${uploadBucket.bucketName}/protected/*`
           ],
           "Effect": "Allow"
         },
@@ -99,14 +103,32 @@ export class ExtractTextApiStack extends cdk.Stack {
             "s3:ListBucket"
           ],
           "Resource": [
-            "arn:aws:s3:::{enter bucket name}"
+            `arn:aws:s3:::${uploadBucket.bucketName}`
           ],
           "Effect": "Allow"
         }
       ]
     }
 
+    const customPolicyDocumnt = iam.PolicyDocument.fromJson(unAuthPolicyDocument);
 
+    unAuthRole.attachInlinePolicy(new iam.Policy(this, 'UnAuthPolicy', {
+      document: customPolicyDocumnt
+    }));
+
+    const identityPool = new CfnIdentityPool(this, 'Ocr-extract-api-IdentityPool', {
+      allowUnauthenticatedIdentities: true,
+    
+    })
+
+    new cognito.CfnIdentityPoolRoleAttachment(this, 'roleattachement', {
+      identityPoolId: identityPool.ref,
+      roles: {
+        authenticated: unAuthRole.roleArn,
+        unauthenticated: unAuthRole.roleArn
+      },
+    })
+   
 
     imageProcessor.addEventSource(new S3EventSource(uploadBucket, {
       events: [EventType.OBJECT_CREATED]
