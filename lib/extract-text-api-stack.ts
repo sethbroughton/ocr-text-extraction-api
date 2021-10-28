@@ -8,10 +8,7 @@ import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
 import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
 import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
-import * as iam from '@aws-cdk/aws-iam';
-import { Role, ServicePrincipal } from '@aws-cdk/aws-iam';
-import * as cognito from '@aws-cdk/aws-cognito';
-import { CfnIdentityPool } from '@aws-cdk/aws-cognito';
+import { S3Upload } from './Constructs/S3Upload';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -47,92 +44,14 @@ export class ExtractTextApiStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true
     })
-
-    // .fromBucketArn(this, 'UploadBucket', 'arn:aws:s3:::webapp1422c2444df1494d81f0a1936bdc0c68192600-dev/public/')
-
-    const unAuthRole = new Role(this, 'unAuthRole', {
-      assumedBy: new ServicePrincipal('s3.amazonaws.com'),
-    });
-
-    // const AuthRole = new Role(this, )
-
-    const unAuthPolicyDocument = {
-      "Version": "2012-10-17",
-      "Statement": [
-        {
-          "Action": [
-            "s3:GetObject",
-            "s3:PutObject",
-            "s3:DeleteObject"
-          ],
-          "Resource": [
-            `arn:aws:s3:::${uploadBucket.bucketName}/public/*`
-          ],
-          "Effect": "Allow"
-        },
-        {
-          "Action": [
-            "s3:PutObject"
-          ],
-          "Resource": [
-            `arn:aws:s3:::${uploadBucket.bucketName}/uploads/*`
-          ],
-          "Effect": "Allow"
-        },
-        {
-          "Action": [
-            "s3:GetObject"
-          ],
-          "Resource": [
-            `arn:aws:s3:::${uploadBucket.bucketName}/protected/*`
-          ],
-          "Effect": "Allow"
-        },
-        {
-          "Condition": {
-            "StringLike": {
-              "s3:prefix": [
-                "public/",
-                "public/*",
-                "protected/",
-                "protected/*"
-              ]
-            }
-          },
-          "Action": [
-            "s3:ListBucket"
-          ],
-          "Resource": [
-            `arn:aws:s3:::${uploadBucket.bucketName}`
-          ],
-          "Effect": "Allow"
-        }
-      ]
-    }
-
-    const customPolicyDocumnt = iam.PolicyDocument.fromJson(unAuthPolicyDocument);
-
-    unAuthRole.attachInlinePolicy(new iam.Policy(this, 'UnAuthPolicy', {
-      document: customPolicyDocumnt
-    }));
-
-    const identityPool = new CfnIdentityPool(this, 'Ocr-extract-api-IdentityPool', {
-      allowUnauthenticatedIdentities: true,
-    
-    })
-
-    new cognito.CfnIdentityPoolRoleAttachment(this, 'roleattachement', {
-      identityPoolId: identityPool.ref,
-      roles: {
-        authenticated: unAuthRole.roleArn,
-        unauthenticated: unAuthRole.roleArn
-      },
-    })
    
-
     imageProcessor.addEventSource(new S3EventSource(uploadBucket, {
       events: [EventType.OBJECT_CREATED]
     }))
+
+    new S3Upload(this, 'S3Upload', {
+      Bucket: uploadBucket
+    })
 
   }
 }
