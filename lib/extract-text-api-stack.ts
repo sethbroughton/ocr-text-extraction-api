@@ -1,7 +1,7 @@
 import * as cdk from '@aws-cdk/core';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python';
 import * as lambda from '@aws-cdk/aws-lambda';
-import { Code, Runtime } from '@aws-cdk/aws-lambda';
+import { Code, LogRetention, Runtime } from '@aws-cdk/aws-lambda';
 import * as path from 'path';
 import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
@@ -9,6 +9,9 @@ import { S3Upload } from './Constructs/S3Upload';
 import { SqsDestination } from '@aws-cdk/aws-s3-notifications';
 import { Trail } from '@aws-cdk/aws-cloudtrail';
 import { Archive, EventBus, Rule } from '@aws-cdk/aws-events';
+import { LogGroup, RetentionDays } from '@aws-cdk/aws-logs';
+import { CloudWatchLogGroup } from '@aws-cdk/aws-events-targets';
+
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -44,21 +47,21 @@ export class ExtractTextApiStack extends cdk.Stack {
     uploadBucket.grantReadWrite(imageProcessor);
 
     const trail = new Trail(this, 'CloudTrail');
+    
+    uploadBucket.onCloudTrailEvent('putEvent');
+    
 
-    uploadBucket.onCloudTrailPutObject('putEvent');
+    const logGroup = new LogGroup(this, 'LogGroup', {
+      retention: RetentionDays.ONE_DAY
+    })
 
     const uploadRule = new Rule(this, 'UploadRule', {
       eventPattern: {
-        account: ['077140750783']
-      }
+        source: ["aws.s3"]
+      },
     });
 
-    const archive = new Archive(this, 'Archive', {
-      eventPattern: {
-        account: ['077140750783'],
-      },
-      sourceEventBus: EventBus.fromEventBusArn(this, 'EventBus', 'arn:aws:events:us-east-1:077140750783:event-bus/default');
-    })
+    uploadRule.addTarget(new CloudWatchLogGroup(logGroup));
 
   }
 }
