@@ -6,6 +6,9 @@ import * as path from 'path';
 import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
 import { S3Upload } from './Constructs/S3Upload';
+import { SqsDestination } from '@aws-cdk/aws-s3-notifications';
+import { Trail } from '@aws-cdk/aws-cloudtrail';
+import { Archive, EventBus, Rule } from '@aws-cdk/aws-events';
 
 export class ExtractTextApiStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
@@ -40,6 +43,22 @@ export class ExtractTextApiStack extends cdk.Stack {
 
     uploadBucket.grantReadWrite(imageProcessor);
 
+    const trail = new Trail(this, 'CloudTrail');
+
+    uploadBucket.onCloudTrailPutObject('putEvent');
+
+    const uploadRule = new Rule(this, 'UploadRule', {
+      eventPattern: {
+        account: ['077140750783']
+      }
+    });
+
+    const archive = new Archive(this, 'Archive', {
+      eventPattern: {
+        account: ['077140750783'],
+      },
+      sourceEventBus: EventBus.fromEventBusArn(this, 'EventBus', 'arn:aws:events:us-east-1:077140750783:event-bus/default');
+    })
 
   }
 }
