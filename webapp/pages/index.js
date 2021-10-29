@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useState } from 'react';
 import Amplify, { Storage } from 'aws-amplify';
+import { promises } from 'stream';
 
 Amplify.configure({
   Auth: {
@@ -19,20 +20,29 @@ const Home = () => {
 
   const [uploadComplete, setUploadComplete] = useState(false);
 
-  async function uploadFile(e) {
+  async function handleSubmitFiles(e) {
     e.preventDefault();
-    const file = e.target.files[0];
-    try {
-      await Storage.put(file.name, file, {
-        completeCallback: (event) => {
-          console.log('upload complete: ' + event)
-          setUploadComplete(true)
-        }
-      }
-      )
-    } catch (error) {
-      console.log("Error uploading file: ", error);
+    const files = e.target.file.files;
+    const promises = [];
+    for(let file of files) {
+      promises.push(Storage.put(file.name,file))
     }
+
+    await Promise.all(promises);
+
+// console.log(files.FileList.map((file)=> console.log(file)));
+    // Promise.all(files.map( (file) => Storage.put(file.name, file))).then((values) => {
+    //   console.log(values);
+    // }).catch((err)=> console.error(err));
+
+    // Promise.all()
+    // try {
+    //   await Storage.put(file.name, file, {
+    //   });
+    //   setUploadComplete(true);
+    // } catch (error) {
+    //   console.log("Error uploading file: ", error);
+    // }
   }
 
   return (
@@ -46,23 +56,16 @@ const Home = () => {
           <h1 className="text-6xl font-bold">
             Upload an image
           </h1>
-          {/* <form onSubmit={onSubmit}>
-            <label>
-              Filename:
-              <input type="file" /> {uploadComplete && <p>Upload Complete </p>}
-            </label>
-            <div>
-              <input type="submit" value="Submit" />
+          <form className="w-full max-w-sm" onSubmit={handleSubmitFiles} encType="multipart/form-data">
+            <div className="flex items-center border-b border-teal-500 py-2">
+              {/* <label for="file">Choose file to upload</label> */}
+              <input className="appearance-none bg-transparent border-none w-full text-gray-700 mr-3 py-1 px-2 leading-tight focus:outline-none" placeholder="File" aria-label="File to Upload" type="file" id="file" name="file" multiple/>
             </div>
-          </form> */}
-
-          <form onSubmit={uploadFile}>
-            {/* <label htmlFor="name">Name</label> */}
-            <input type="file" required />
             <div>
-            <button type="submit">Submit</button>
+              <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit</button>
             </div>
           </form>
+          {uploadComplete && <div>Success! </div>}
         </main>
         <footer className="flex items-center justify-center w-full h-24 border-t">
           <a
