@@ -3,9 +3,6 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python';
 import * as lambda from '@aws-cdk/aws-lambda';
 import { Code, Runtime } from '@aws-cdk/aws-lambda';
 import * as path from 'path';
-import * as apigateway from '@aws-cdk/aws-apigatewayv2';
-import { HttpMethod } from '@aws-cdk/aws-apigatewayv2';
-import { LambdaProxyIntegration } from '@aws-cdk/aws-apigatewayv2-integrations';
 import { Bucket, EventType } from '@aws-cdk/aws-s3';
 import { S3EventSource } from '@aws-cdk/aws-lambda-event-sources';
 import { S3Upload } from './Constructs/S3Upload';
@@ -28,18 +25,6 @@ export class ExtractTextApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(10),
     })
 
-    const processImageIntegration = new LambdaProxyIntegration({
-      handler: imageProcessor
-    })
-
-    const api = new apigateway.HttpApi(this, 'OCR-Api-Gateway');
-
-    api.addRoutes({
-      path: '/processor',
-      methods: [HttpMethod.POST],
-      integration: processImageIntegration
-    })
-
     const uploadBucket = new Bucket(this, 'UploadBucket', {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true
@@ -52,6 +37,9 @@ export class ExtractTextApiStack extends cdk.Stack {
     new S3Upload(this, 'S3Upload', {
       Bucket: uploadBucket
     })
+
+    uploadBucket.grantReadWrite(imageProcessor);
+
 
   }
 }

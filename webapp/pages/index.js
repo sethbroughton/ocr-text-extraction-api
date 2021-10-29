@@ -1,7 +1,6 @@
 import Head from 'next/head'
 import { useState } from 'react';
 import Amplify, { Storage } from 'aws-amplify';
-import { promises } from 'stream';
 
 Amplify.configure({
   Auth: {
@@ -29,20 +28,6 @@ const Home = () => {
     }
 
     await Promise.all(promises);
-
-// console.log(files.FileList.map((file)=> console.log(file)));
-    // Promise.all(files.map( (file) => Storage.put(file.name, file))).then((values) => {
-    //   console.log(values);
-    // }).catch((err)=> console.error(err));
-
-    // Promise.all()
-    // try {
-    //   await Storage.put(file.name, file, {
-    //   });
-    //   setUploadComplete(true);
-    // } catch (error) {
-    //   console.log("Error uploading file: ", error);
-    // }
   }
 
   return (
